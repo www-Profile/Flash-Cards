@@ -71,7 +71,7 @@ body {
   border: 1px solid var(--border);
   background: var(--bg-2);
   color: var(--text);
-  padding: 10px 2px;       /* ← чуть выше, чтобы текст не резался */
+  padding: 8px 2px;       /* ← чуть выше, чтобы текст не резался */
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -290,6 +290,7 @@ body.anim-zoom .card.is-flipped .card__face--back  { transform: scale(1);   opac
   gap: 8px;
   max-height: 220px;
   overflow-y: auto;
+  padding-right: 8px;
 }
 
 .deck-item {
@@ -412,6 +413,7 @@ body.anim-zoom .card.is-flipped .card__face--back  { transform: scale(1);   opac
   gap: 8px;
   max-height: 340px;
   overflow-y: auto;
+    padding-right: 8px;
 }
 
 .card-item {
@@ -583,12 +585,12 @@ body.font-condensed .card__face--back p {
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 6px;
+  padding: 3px 0px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
   z-index: 100;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      min-width: 180px;
 }
 
 .sort-menu[hidden] {
