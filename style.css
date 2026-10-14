@@ -119,6 +119,7 @@ body.theme-light .btn--primary {
 .card-container {
   perspective: 1200px;
   height: 340px;
+  margin: 10px 0;
 }
 
 .card {
