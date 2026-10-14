@@ -25,7 +25,7 @@ const DEFAULT_DECKS = [
 ];
 
 const DEFAULT_SETTINGS = {
-  theme: "dark",
+  theme: "system",      // было "dark"
   animation: "flipY",
   speed: 0.6,
   shuffleOnStart: false
@@ -34,6 +34,12 @@ const DEFAULT_SETTINGS = {
 let decks = [];
 let settings = { ...DEFAULT_SETTINGS };
 let favoriteOnly = false;
+
+function resolveTheme() {
+  if (settings.theme !== "system") return settings.theme;
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return prefersDark ? "dark" : "light";
+}
 
 function loadState() {
   try {
@@ -94,7 +100,7 @@ const cardEl          = document.getElementById("card");
 const wordText        = document.getElementById("wordText");
 const definitionText  = document.getElementById("definitionText");
 const currentDeckName = document.getElementById("currentDeckName");
-const deckCardCount   = document.getElementById("deckCardCount");
+const cardListCount   = document.getElementById("cardListCount");
 
 const starFront       = document.getElementById("starFront");
 const starBack        = document.getElementById("starBack");
@@ -145,7 +151,8 @@ function currentDeck() {
 }
 
 function applySettings() {
-  document.body.className = `theme-${settings.theme} anim-${settings.animation}`;
+  const theme = resolveTheme();
+  document.body.className = `theme-${theme} anim-${settings.animation}`;
   document.documentElement.style.setProperty("--anim-speed", settings.speed + "s");
   cardEl.style.setProperty("--anim-speed", settings.speed + "s");
 
@@ -154,6 +161,11 @@ function applySettings() {
   speedSelect.value = String(settings.speed);
   shuffleOnStart.checked = settings.shuffleOnStart;
 }
+
+// Реагируем на смену системной темы «на лету»
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (settings.theme === "system") applySettings();
+});
 
 function wait(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -173,7 +185,7 @@ function rebuildViewIndices() {
 
 function updateCounters() {
   const deck = currentDeck();
-  if (deck) deckCardCount.textContent = deck.cards.length;
+  if (deck) cardListCount.textContent = deck.cards.length;
 }
 
 function updateStar() {
@@ -362,6 +374,9 @@ function deleteDeck(index) {
 function renderCardList() {
   const deck = currentDeck();
   cardListEl.innerHTML = "";
+
+  // Обновляем бейдж в заголовке модалки
+  cardListCount.textContent = deck ? deck.cards.length : 0;
 
   if (!deck || deck.cards.length === 0) {
     cardListEmpty.hidden = false;

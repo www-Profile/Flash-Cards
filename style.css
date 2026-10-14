@@ -35,9 +35,9 @@ body {
   background: var(--bg);
   color: var(--text);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 20px;
+  padding: 80px 20px 20px 20px;
   transition: background 0.3s, color 0.3s;
 }
 
@@ -46,7 +46,7 @@ body {
   max-width: 620px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
 }
 
 /* ===== Заголовок ===== */
@@ -60,7 +60,7 @@ body {
 /* ===== Ряд кнопок ===== */
 .btn-row {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   width: 100%;
 }
 
@@ -70,7 +70,7 @@ body {
   border: 1px solid var(--border);
   background: var(--bg-2);
   color: var(--text);
-  padding: 8px;
+  padding: 8px 2px;
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -95,7 +95,6 @@ body {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border-color: transparent;
   color: #0f172a;
-  padding: 8px;
   font-size: 0.8rem;
 }
 
@@ -107,13 +106,13 @@ body.theme-light .btn--primary {
 /* Настройка конкретных кнопок в модалках — чуть больше */
 .modal__actions .btn {
   flex: 1 1 0;
-  padding: 8px;
   font-size: 0.8rem;
 }
 
 /* На очень узких экранах — перенос */
 @media (max-width: 420px) {
-  .toolbar { flex-wrap: wrap; }
+  .btn-row { flex-wrap: wrap; }
+  .btn-row .btn { flex: 1 1 45%; }
 }
 
 /* ===== Карточка ===== */
@@ -389,7 +388,7 @@ body.anim-zoom .card.is-flipped .card__face--back  { transform: scale(1);   opac
 
 .modal__actions {
   display: flex;
-  gap: 12px;
+  gap: 4px;
   justify-content: flex-end;
 }
 
@@ -506,4 +505,21 @@ body.anim-zoom .card.is-flipped .card__face--back  { transform: scale(1);   opac
 .modal__content select option {
   background: var(--bg-2);
   color: var(--text);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.modal__badge {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
 }

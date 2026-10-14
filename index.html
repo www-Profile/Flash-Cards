@@ -16,9 +16,9 @@
   <button class="btn" id="openDecksBtn">
     📂 <span id="currentDeckName">Раздел</span>
   </button>
-  <button class="btn" id="openCardListBtn">
-    📋 Список (<span id="deckCardCount">0</span>)
-  </button>
+<button class="btn" id="openCardListBtn">
+  📋 Список
+</button>
   <button class="btn" id="toggleFavFilterBtn">
     ⭐ Избранные
   </button>
@@ -72,7 +72,10 @@
 <!-- Модалка: список карточек -->
 <div class="modal" id="cardListModal">
   <div class="modal__content modal__content--wide">
-    <h2>Карточки раздела</h2>
+    <div class="modal__header">
+      <h2>Карточки раздела</h2>
+      <span class="modal__badge">🃏 <span id="cardListCount">0</span></span>
+    </div>
     <ul class="card-list" id="cardList"></ul>
     <p class="card-list__empty" id="cardListEmpty" hidden>В этом разделе пока нет карточек</p>
     <div class="modal__actions">
@@ -87,13 +90,14 @@
     <div class="modal__content">
       <h2>Настройки</h2>
 
-      <label>
-        Тема
-        <select id="themeSelect">
-          <option value="dark">Тёмная</option>
-          <option value="light">Светлая</option>
-        </select>
-      </label>
+<label>
+  Тема
+  <select id="themeSelect">
+    <option value="system">Системная</option>
+    <option value="dark">Тёмная</option>
+    <option value="light">Светлая</option>
+  </select>
+</label>
 
       <label>
         Анимация переворота
