@@ -62,6 +62,7 @@ body {
   display: flex;
   gap: 4px;
   width: 100%;
+  align-items: stretch;    /* ← все дети одной высоты */
 }
 
 /* ===== Универсальная кнопка ===== */
@@ -70,7 +71,7 @@ body {
   border: 1px solid var(--border);
   background: var(--bg-2);
   color: var(--text);
-  padding: 8px 2px;
+  padding: 10px 2px;       /* ← чуть выше, чтобы текст не резался */
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -80,6 +81,11 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
+  display: inline-flex;     /* ← центрируем содержимое */
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;         /* ← минимальная высота одинаковая */
+  box-sizing: border-box;
   transition: transform 0.15s, border-color 0.15s, background 0.15s;
 }
 
@@ -107,12 +113,6 @@ body.theme-light .btn--primary {
 .modal__actions .btn {
   flex: 1 1 0;
   font-size: 0.8rem;
-}
-
-/* На очень узких экранах — перенос */
-@media (max-width: 480px) {
-  .btn-row { flex-wrap: wrap; }
-  .btn-row .btn { flex: 1 1 45%; }
 }
 
 /* ===== Карточка ===== */
@@ -562,10 +562,17 @@ body.font-condensed .card__face--back p {
   position: relative;
   flex: 1 1 0;
   display: flex;
+  align-items: stretch;    /* ← кнопка внутри на всю высоту обёртки */
 }
 
 .sort-wrap .btn {
   width: 100%;
+  height: 100%;            /* ← растягиваем на всю высоту обёртки */
+}
+
+/* Кнопка «Добавить карточку» — тоже половина */
+#addBtn {
+  flex: 1 1 0;   /* ← НЕ 2 1 0, а ровно 1 1 0 */
 }
 
 .sort-menu {
@@ -607,8 +614,45 @@ body.font-condensed .card__face--back p {
   color: var(--accent);
 }
 
-.sort-wrap {
-  position: relative;
-  flex: 1 1 0;
-  display: flex;
+/* На очень узких экранах — перенос */
+@media (max-width: 480px) {
+  .btn-row { flex-wrap: wrap; }
+  .btn-row .btn { flex: 1 1 45%; }
+}
+
+/* ===== Очень узкие экраны (мобильные) ===== */
+@media (max-width: 340px) {
+
+  /* Верхние кнопки: прячем текст, остаются только эмодзи */
+  .btn-row:first-of-type .label {
+    display: none;
+  }
+
+  .btn-row:first-of-type .btn {
+    font-size: 1.2rem;
+    padding: 4px 0;
+  }
+
+  /* Подсказки на карточке — скрываем */
+  .card__hint {
+    display: none;
+  }
+
+  /* Нижние кнопки — каждая в своём ряду */
+  .btn-row:last-of-type {
+    flex-direction: column;
+  }
+
+  .btn-row:last-of-type .sort-wrap,
+  .btn-row:last-of-type .btn {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 40px;
+  }
+
+  /* Меню сортировки — на всю ширину */
+  .sort-menu {
+    left: 0;
+    right: 0;
+  }
 }
