@@ -1,0 +1,509 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ===== Тёмная тема (по умолчанию) ===== */
+:root,
+body.theme-dark {
+  --bg: #0f172a;
+  --bg-2: #1e293b;
+  --accent: #63c4ee;
+  --accent-2: #818cf8;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.1);
+  --card-front: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  --card-back: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* ===== Светлая тема ===== */
+body.theme-light {
+  --bg: #f1f5f9;
+  --bg-2: #ffffff;
+  --accent: #0ea5e9;
+  --accent-2: #6366f1;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: rgba(0, 0, 0, 0.1);
+  --card-front: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+  --card-back: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+body {
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  transition: background 0.3s, color 0.3s;
+}
+
+.app {
+  width: 100%;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ===== Заголовок ===== */
+.app__title {
+  font-size: 2rem;
+  font-weight: 1000;
+  letter-spacing: -1px;
+  text-align: center;
+}
+
+/* ===== Ряд кнопок ===== */
+.btn-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+/* ===== Универсальная кнопка ===== */
+.btn {
+  flex: 1 1 0;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text);
+  padding: 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+}
+
+/* Активная кнопка-переключатель (например, фильтр избранных) */
+.btn.is-active {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+/* Главная акцентная кнопка (для модалок: Сохранить / Создать / Готово) */
+.btn--primary {
+  flex: 1 1 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  color: #0f172a;
+  padding: 8px;
+  font-size: 0.8rem;
+}
+
+/* Акцентная кнопка — белый текст в светлой теме */
+body.theme-light .btn--primary {
+  color: #ffffff;
+}
+
+/* Настройка конкретных кнопок в модалках — чуть больше */
+.modal__actions .btn {
+  flex: 1 1 0;
+  padding: 8px;
+  font-size: 0.8rem;
+}
+
+/* На очень узких экранах — перенос */
+@media (max-width: 420px) {
+  .toolbar { flex-wrap: wrap; }
+}
+
+/* ===== Карточка ===== */
+.card-container {
+  perspective: 1200px;
+  height: 340px;
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: transform var(--anim-speed, 0.6s) cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.card__face {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.card__face--front { background: var(--card-front); }
+.card__face--back  { background: var(--card-back); color: #fff; }
+
+.card__label {
+  position: absolute;
+  top: 18px;
+  left: 22px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+}
+
+.card__face--back .card__label,
+.card__face--back .card__counter,
+.card__face--back .card__hint {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.card__counter {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.card__face--front h2 {
+  font-size: 2.1rem;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.card__face--back p {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.card__hint {
+  position: absolute;
+  bottom: 18px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ===== Звёздочка на карточке ===== */
+.card__star {
+  position: absolute;
+  top: 14px;
+  right: 18px;    /* было 60px — теперь счётчика нет */
+  background: transparent;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 2px 6px;
+  border-radius: 8px;
+  transition: transform 0.15s, color 0.15s, background 0.15s;
+  line-height: 1;
+}
+
+.card__star.is-favorite {
+  color: #f59e0b;
+}
+
+.card__face--back .card__star {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.card__face--back .card__star.is-favorite {
+  color: #fbbf24;
+}
+
+/* ============================================================
+   Анимации
+   ============================================================ */
+
+/* ---------- Flip Y ---------- */
+body.anim-flipY .card__face--back { transform: rotateY(180deg); }
+body.anim-flipY .card.is-flipped  { transform: rotateY(180deg); }
+
+/* ---------- Flip X ---------- */
+body.anim-flipX .card__face--back { transform: rotateX(180deg); }
+body.anim-flipX .card.is-flipped  { transform: rotateX(180deg); }
+
+/* ---------- Fade ---------- */
+body.anim-fade .card {
+  transform-style: flat;
+  transition: none;
+}
+body.anim-fade .card__face {
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+  transition: opacity var(--anim-speed, 0.6s) ease;
+}
+body.anim-fade .card__face--front { opacity: 1; pointer-events: auto; }
+body.anim-fade .card__face--back  { opacity: 0; pointer-events: none; transform: none; }
+body.anim-fade .card.is-flipped .card__face--front { opacity: 0; pointer-events: none; }
+body.anim-fade .card.is-flipped .card__face--back  { opacity: 1; pointer-events: auto; }
+
+/* ---------- Slide ---------- */
+body.anim-slide .card {
+  transform-style: flat;
+  transition: none;
+}
+body.anim-slide .card__face {
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+  transition: transform var(--anim-speed, 0.6s) ease,
+              opacity  var(--anim-speed, 0.6s) ease;
+}
+body.anim-slide .card__face--front { transform: translateX(0);     opacity: 1; }
+body.anim-slide .card__face--back  { transform: translateX(100%);  opacity: 0; }
+body.anim-slide .card.is-flipped .card__face--front { transform: translateX(-100%); opacity: 0; }
+body.anim-slide .card.is-flipped .card__face--back  { transform: translateX(0);     opacity: 1; }
+
+/* ---------- Zoom ---------- */
+body.anim-zoom .card {
+  transform-style: flat;
+  transition: none;
+}
+body.anim-zoom .card__face {
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+  transition: transform var(--anim-speed, 0.6s) ease,
+              opacity  var(--anim-speed, 0.6s) ease;
+}
+body.anim-zoom .card__face--front { transform: scale(1);   opacity: 1; }
+body.anim-zoom .card__face--back  { transform: scale(0.6); opacity: 0; }
+body.anim-zoom .card.is-flipped .card__face--front { transform: scale(0.6); opacity: 0; }
+body.anim-zoom .card.is-flipped .card__face--back  { transform: scale(1);   opacity: 1; }
+
+/* ===== Список разделов ===== */
+.deck-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.deck-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(127, 127, 127, 0.08);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.deck-item.is-active { border-color: var(--accent); background: rgba(56, 189, 248, 0.15); }
+.deck-item__name { font-size: 0.95rem; flex: 1; }
+.deck-item__count { font-size: 0.8rem; color: var(--muted); }
+.deck-item__delete {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+/* ===== Модальные окна ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 10;
+}
+
+.modal.is-open { display: flex; }
+
+.modal__content {
+  background: var(--bg-2);
+  color: var(--text);
+  border-radius: 20px;
+  padding: 16px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border: 1px solid var(--border);
+}
+
+.modal__content--wide {
+  max-width: 640px;
+}
+
+.modal__content h2 { font-size: 1.3rem; }
+
+.modal__content label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.modal__content label.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.modal__content input[type="text"],
+.modal__content textarea,
+.modal__content select {
+  background: rgba(127, 127, 127, 0.1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+}
+
+.modal__content input:focus,
+.modal__content textarea:focus,
+.modal__content select:focus {
+  border-color: var(--accent);
+}
+
+.modal__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.modal__actions--split {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modal__actions--split .btn {
+  font-size: 0.85rem;
+  padding: 10px 14px;
+}
+
+/* ===== Список карточек в модалке ===== */
+.card-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.card-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(127, 127, 127, 0.08);
+  border: 1px solid var(--border);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.card-item__fav {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 2px 4px;
+  line-height: 1;
+  transition: transform 0.15s, color 0.15s;
+}
+
+.card-item__fav.is-favorite { color: #f59e0b; }
+
+.card-item__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.card-item__word {
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-item__def {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-item__actions {
+  display: flex;
+  gap: 4px;
+}
+
+.card-item__btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: var(--muted);
+  transition: background 0.15s, color 0.15s;
+}
+
+.card-list__empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 20px 0;
+}
+
+/* ===== Скроллбар ===== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; border-radius: 8px; }
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+::-webkit-scrollbar-corner { background: transparent; }
+
+.deck-list::-webkit-scrollbar,
+.card-list::-webkit-scrollbar { width: 6px; }
+
+/* Опции выпадающих списков */
+.modal__content select option {
+  background: var(--bg-2);
+  color: var(--text);
+}

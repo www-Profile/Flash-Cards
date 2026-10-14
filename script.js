@@ -1,0 +1,635 @@
+// ============================================================
+//  ХРАНИЛИЩЕ
+// ============================================================
+const STORAGE_KEY = "flashcards-state-v1";
+
+const DEFAULT_DECKS = [
+  {
+    name: "Наука",
+    cards: [
+      { word: "Гипотеза",   definition: "Предположение, требующее доказательства.", favorite: false },
+      { word: "Абстракция", definition: "Отвлечение от частных свойств для выделения общих.", favorite: false },
+      { word: "Алгоритм",   definition: "Последовательность действий для решения задачи.", favorite: false },
+      { word: "Парадигма",  definition: "Совокупность базовых идей и методов.", favorite: false },
+      { word: "Рекурсия",   definition: "Способ описания процесса, вызывающего сам себя.", favorite: false }
+    ]
+  },
+  {
+    name: "Языки",
+    cards: [
+      { word: "House",     definition: "Дом",    favorite: false },
+      { word: "Knowledge", definition: "Знание", favorite: false },
+      { word: "Freedom",   definition: "Свобода", favorite: false }
+    ]
+  }
+];
+
+const DEFAULT_SETTINGS = {
+  theme: "dark",
+  animation: "flipY",
+  speed: 0.6,
+  shuffleOnStart: false
+};
+
+let decks = [];
+let settings = { ...DEFAULT_SETTINGS };
+let favoriteOnly = false;
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      decks = JSON.parse(JSON.stringify(DEFAULT_DECKS));
+      settings = { ...DEFAULT_SETTINGS };
+      return;
+    }
+    const data = JSON.parse(raw);
+    decks = Array.isArray(data.decks) && data.decks.length
+      ? data.decks.map(normalizeDeck)
+      : JSON.parse(JSON.stringify(DEFAULT_DECKS));
+    settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
+  } catch (e) {
+    console.warn("Не удалось прочитать localStorage:", e);
+    decks = JSON.parse(JSON.stringify(DEFAULT_DECKS));
+    settings = { ...DEFAULT_SETTINGS };
+  }
+}
+
+function normalizeDeck(deck) {
+  return {
+    name: String(deck.name || "Без названия"),
+    cards: Array.isArray(deck.cards)
+      ? deck.cards.map((c) => ({
+          word: String(c.word ?? ""),
+          definition: String(c.definition ?? ""),
+          favorite: Boolean(c.favorite)
+        }))
+      : []
+  };
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ decks, settings }));
+  } catch (e) {
+    console.warn("Не удалось сохранить в localStorage:", e);
+  }
+}
+
+// ============================================================
+//  СОСТОЯНИЕ ПРИЛОЖЕНИЯ
+// ============================================================
+let currentDeckIndex = 0;
+let currentCardIndex = 0;
+let isFlipped = false;
+let isAnimating = false;
+
+// Индекс карточки в ПОЛНОМ массиве раздела (не в отфильтрованном)
+// Нужен, чтобы при фильтре «только избранные» правильно понять,
+// какую именно карточку мы показываем.
+let viewIndices = [];  // индексы карточек, доступных в текущем режиме
+
+// ===== DOM =====
+const cardEl          = document.getElementById("card");
+const wordText        = document.getElementById("wordText");
+const definitionText  = document.getElementById("definitionText");
+const currentDeckName = document.getElementById("currentDeckName");
+const deckCardCount   = document.getElementById("deckCardCount");
+
+const starFront       = document.getElementById("starFront");
+const starBack        = document.getElementById("starBack");
+
+const openDecksBtn    = document.getElementById("openDecksBtn");
+const decksModal      = document.getElementById("decksModal");
+const closeDecksBtn   = document.getElementById("closeDecksBtn");
+const deckListEl      = document.getElementById("deckList");
+const newDeckName     = document.getElementById("newDeckName");
+const createDeckBtn   = document.getElementById("createDeckBtn");
+
+const openCardListBtn = document.getElementById("openCardListBtn");
+const cardListModal   = document.getElementById("cardListModal");
+const closeCardListBtn= document.getElementById("closeCardListBtn");
+const addCardFromListBtn = document.getElementById("addCardFromListBtn");
+const cardListEl      = document.getElementById("cardList");
+const cardListEmpty   = document.getElementById("cardListEmpty");
+
+const toggleFavFilterBtn = document.getElementById("toggleFavFilterBtn");
+
+const openSettingsBtn = document.getElementById("openSettingsBtn");
+const settingsModal   = document.getElementById("settingsModal");
+const closeSettingsBtn= document.getElementById("closeSettingsBtn");
+const resetSettingsBtn= document.getElementById("resetSettingsBtn");
+const themeSelect     = document.getElementById("themeSelect");
+const animationSelect = document.getElementById("animationSelect");
+const speedSelect     = document.getElementById("speedSelect");
+const shuffleOnStart  = document.getElementById("shuffleOnStart");
+
+const cardModal       = document.getElementById("cardModal");
+const cardModalTitle  = document.getElementById("cardModalTitle");
+const addBtn          = document.getElementById("addBtn");
+const newWord         = document.getElementById("newWord");
+const newDefinition   = document.getElementById("newDefinition");
+const saveBtn         = document.getElementById("saveBtn");
+const cancelBtn       = document.getElementById("cancelBtn");
+
+const shuffleBtn      = document.getElementById("shuffleBtn");
+
+// Что редактируем: null — новая карточка, число — индекс в текущем разделе
+let editingCardIndex = null;
+
+// ============================================================
+//  ПОМОЩНИКИ
+// ============================================================
+function currentDeck() {
+  return decks[currentDeckIndex];
+}
+
+function applySettings() {
+  document.body.className = `theme-${settings.theme} anim-${settings.animation}`;
+  document.documentElement.style.setProperty("--anim-speed", settings.speed + "s");
+  cardEl.style.setProperty("--anim-speed", settings.speed + "s");
+
+  themeSelect.value = settings.theme;
+  animationSelect.value = settings.animation;
+  speedSelect.value = String(settings.speed);
+  shuffleOnStart.checked = settings.shuffleOnStart;
+}
+
+function wait(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// Пересчитываем список видимых карточек с учётом фильтра избранного
+function rebuildViewIndices() {
+  const deck = currentDeck();
+  if (!deck) { viewIndices = []; return; }
+
+  viewIndices = [];
+  for (let i = 0; i < deck.cards.length; i++) {
+    if (!favoriteOnly || deck.cards[i].favorite) viewIndices.push(i);
+  }
+  if (currentCardIndex >= viewIndices.length) currentCardIndex = 0;
+}
+
+function updateCounters() {
+  const deck = currentDeck();
+  if (deck) deckCardCount.textContent = deck.cards.length;
+}
+
+function updateStar() {
+  const deck = currentDeck();
+  const realIndex = viewIndices[currentCardIndex];
+  const card = deck && realIndex != null ? deck.cards[realIndex] : null;
+  const isFav = !!(card && card.favorite);
+
+  starFront.classList.toggle("is-favorite", isFav);
+  starBack.classList.toggle("is-favorite", isFav);
+  starFront.textContent = isFav ? "★" : "☆";
+  starBack.textContent  = isFav ? "★" : "☆";
+
+  starFront.disabled = !card;
+  starBack.disabled  = !card;
+}
+
+// ============================================================
+//  ЗАГРУЗКА КАРТОЧКИ (без анимации)
+// ============================================================
+function loadCurrentCard() {
+  const deck = currentDeck();
+  if (!deck) return;
+
+  currentDeckName.textContent = deck.name;
+
+  rebuildViewIndices();
+
+  if (viewIndices.length === 0) {
+    wordText.textContent = favoriteOnly
+      ? "Нет избранных карточек"
+      : "Нет карточек";
+    definitionText.textContent = favoriteOnly
+      ? "Отметь карточки звёздочкой ⭐ или выключи фильтр"
+      : "Добавь первую карточку в раздел";
+    updateCounters();
+    updateStar();
+    cardEl.classList.remove("is-flipped");
+    isFlipped = false;
+    return;
+  }
+
+  const card = deck.cards[viewIndices[currentCardIndex]];
+  wordText.textContent = card.word;
+  definitionText.textContent = card.definition;
+
+  updateCounters();
+  updateStar();
+
+  cardEl.classList.remove("is-flipped");
+  isFlipped = false;
+}
+
+// ============================================================
+//  ЛОГИКА КЛИКА
+// ============================================================
+async function handleCardClick() {
+  const deck = currentDeck();
+  if (!deck || viewIndices.length === 0) return;
+  if (isAnimating) return;
+
+  isAnimating = true;
+  const total = viewIndices.length;
+
+  if (!isFlipped) {
+    cardEl.classList.add("is-flipped");
+    isFlipped = true;
+    await wait(settings.speed * 1000);
+
+    // Готовим слово следующей карточки на скрытой лицевой стороне
+    const nextViewIdx = (currentCardIndex + 1) % total;
+    const nextCard = deck.cards[viewIndices[nextViewIdx]];
+    wordText.textContent = nextCard.word;
+  } else {
+    currentCardIndex = (currentCardIndex + 1) % total;
+    cardEl.classList.remove("is-flipped");
+    isFlipped = false;
+    await wait(settings.speed * 1000);
+
+    const card = deck.cards[viewIndices[currentCardIndex]];
+    definitionText.textContent = card.definition;
+
+    updateCounters();
+    updateStar();
+  }
+
+  isAnimating = false;
+}
+
+// ============================================================
+//  ИЗБРАННОЕ
+// ============================================================
+function toggleFavoriteCurrent() {
+  const deck = currentDeck();
+  const realIndex = viewIndices[currentCardIndex];
+  if (!deck || realIndex == null) return;
+
+  deck.cards[realIndex].favorite = !deck.cards[realIndex].favorite;
+  saveState();
+  updateStar();
+  renderCardList();
+}
+
+// ============================================================
+//  РАЗДЕЛЫ
+// ============================================================
+function renderDeckList() {
+  deckListEl.innerHTML = "";
+
+  decks.forEach((deck, index) => {
+    const li = document.createElement("li");
+    li.className = "deck-item" + (index === currentDeckIndex ? " is-active" : "");
+
+    const name = document.createElement("span");
+    name.className = "deck-item__name";
+    name.textContent = deck.name;
+
+const favCount = deck.cards.filter((c) => c.favorite).length;
+const count = document.createElement("span");
+count.className = "deck-item__count";
+count.textContent = `🃏 ${deck.cards.length} · ⭐ ${favCount}`;
+
+    const del = document.createElement("button");
+    del.className = "deck-item__delete";
+    del.textContent = "🗑️";
+    del.title = "Удалить раздел";
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteDeck(index);
+    });
+
+    li.appendChild(name);
+    li.appendChild(count);
+    li.appendChild(del);
+    li.addEventListener("click", () => switchDeck(index));
+
+    deckListEl.appendChild(li);
+  });
+}
+
+function switchDeck(index) {
+  currentDeckIndex = index;
+  currentCardIndex = 0;
+  isFlipped = false;
+  isAnimating = false;
+  cardEl.classList.remove("is-flipped");
+
+  if (settings.shuffleOnStart) shuffleCards(currentDeck());
+
+  saveState();
+  closeDecksModal();
+  loadCurrentCard();
+}
+
+function createDeck() {
+  const name = newDeckName.value.trim();
+  if (!name) { alert("Введи название раздела!"); return; }
+
+  decks.push({ name, cards: [] });
+  newDeckName.value = "";
+  currentDeckIndex = decks.length - 1;
+  currentCardIndex = 0;
+  saveState();
+  renderDeckList();
+  loadCurrentCard();
+}
+
+function deleteDeck(index) {
+  if (decks.length === 1) { alert("Нельзя удалить последний раздел!"); return; }
+  if (!confirm(`Удалить раздел "${decks[index].name}"?`)) return;
+
+  decks.splice(index, 1);
+  if (currentDeckIndex >= decks.length) currentDeckIndex = decks.length - 1;
+  currentCardIndex = 0;
+  isFlipped = false;
+  cardEl.classList.remove("is-flipped");
+
+  saveState();
+  renderDeckList();
+  loadCurrentCard();
+}
+
+// ============================================================
+//  СПИСОК КАРТОЧЕК
+// ============================================================
+function renderCardList() {
+  const deck = currentDeck();
+  cardListEl.innerHTML = "";
+
+  if (!deck || deck.cards.length === 0) {
+    cardListEmpty.hidden = false;
+    return;
+  }
+  cardListEmpty.hidden = true;
+
+  deck.cards.forEach((card, index) => {
+    const li = document.createElement("li");
+    li.className = "card-item";
+
+    const fav = document.createElement("button");
+    fav.className = "card-item__fav" + (card.favorite ? " is-favorite" : "");
+    fav.textContent = card.favorite ? "★" : "☆";
+    fav.title = "В избранное";
+    fav.addEventListener("click", () => {
+      card.favorite = !card.favorite;
+      saveState();
+      renderCardList();
+      updateStar();
+    });
+
+    const content = document.createElement("div");
+    content.className = "card-item__content";
+    const w = document.createElement("span");
+    w.className = "card-item__word";
+    w.textContent = card.word;
+    const d = document.createElement("span");
+    d.className = "card-item__def";
+    d.textContent = card.definition;
+    content.appendChild(w);
+    content.appendChild(d);
+
+    const actions = document.createElement("div");
+    actions.className = "card-item__actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "card-item__btn";
+    editBtn.textContent = "✏️";
+    editBtn.title = "Редактировать";
+    editBtn.addEventListener("click", () => openCardModal(index));
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "card-item__btn card-item__btn--del";
+    delBtn.textContent = "🗑️";
+    delBtn.title = "Удалить карточку";
+    delBtn.addEventListener("click", () => deleteCard(index));
+
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+
+    li.appendChild(fav);
+    li.appendChild(content);
+    li.appendChild(actions);
+
+    cardListEl.appendChild(li);
+  });
+}
+
+function deleteCard(index) {
+  const deck = currentDeck();
+  if (!deck) return;
+  if (!confirm(`Удалить карточку "${deck.cards[index].word}"?`)) return;
+
+  deck.cards.splice(index, 1);
+  saveState();
+  renderCardList();
+  loadCurrentCard();
+}
+
+// ============================================================
+//  МОДАЛКИ
+// ============================================================
+function openDecksModal() {
+  newDeckName.value = "";
+  renderDeckList();
+  decksModal.classList.add("is-open");
+}
+function closeDecksModal() { decksModal.classList.remove("is-open"); }
+
+function openCardListModal() {
+  renderCardList();
+  cardListModal.classList.add("is-open");
+}
+function closeCardListModal() { cardListModal.classList.remove("is-open"); }
+
+function openSettingsModal() { settingsModal.classList.add("is-open"); }
+function closeSettingsModal() { settingsModal.classList.remove("is-open"); }
+
+// editingIndex: null — новая, число — редактируем существующую
+function openCardModal(editingIndex = null) {
+  editingCardIndex = editingIndex;
+
+  if (editingIndex === null) {
+    cardModalTitle.textContent = "Новая карточка";
+    newWord.value = "";
+    newDefinition.value = "";
+  } else {
+    const card = currentDeck().cards[editingIndex];
+    cardModalTitle.textContent = "Редактировать карточку";
+    newWord.value = card.word;
+    newDefinition.value = card.definition;
+  }
+
+  cardModal.classList.add("is-open");
+  newWord.focus();
+}
+function closeCardModal() {
+  cardModal.classList.remove("is-open");
+  editingCardIndex = null;
+}
+
+// ============================================================
+//  СОХРАНЕНИЕ КАРТОЧКИ (новая или редактирование)
+// ============================================================
+function saveCard() {
+  const word = newWord.value.trim();
+  const definition = newDefinition.value.trim();
+
+  if (!word || !definition) { alert("Заполни оба поля!"); return; }
+
+  const deck = currentDeck();
+
+  if (editingCardIndex === null) {
+    // новая карточка — favorite по умолчанию false
+    deck.cards.push({ word, definition, favorite: false });
+    currentCardIndex = deck.cards.length - 1;
+  } else {
+    // сохраняем существующее значение favorite, не сбрасываем
+    const old = deck.cards[editingCardIndex];
+    deck.cards[editingCardIndex] = {
+      word,
+      definition,
+      favorite: old.favorite
+    };
+  }
+
+  saveState();
+  closeCardModal();
+  renderCardList();
+  loadCurrentCard();
+}
+
+// ============================================================
+//  ПЕРЕМЕШИВАНИЕ
+// ============================================================
+function shuffleCards(deck) {
+  for (let i = deck.cards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck.cards[i], deck.cards[j]] = [deck.cards[j], deck.cards[i]];
+  }
+}
+
+function shuffle() {
+  shuffleCards(currentDeck());
+  currentCardIndex = 0;
+  isFlipped = false;
+  cardEl.classList.remove("is-flipped");
+  saveState();
+  loadCurrentCard();
+}
+
+// ============================================================
+//  ФИЛЬТР ИЗБРАННЫХ
+// ============================================================
+function toggleFavoriteFilter() {
+  favoriteOnly = !favoriteOnly;
+  currentCardIndex = 0;
+  isFlipped = false;
+  cardEl.classList.remove("is-flipped");
+
+  // Подсветка кнопки — теперь прямо здесь
+  toggleFavFilterBtn.classList.toggle("is-active", favoriteOnly);
+
+  loadCurrentCard();
+}
+
+// ============================================================
+//  НАСТРОЙКИ
+// ============================================================
+themeSelect.addEventListener("change", () => {
+  settings.theme = themeSelect.value;
+  saveState();
+  applySettings();
+});
+
+animationSelect.addEventListener("change", () => {
+  settings.animation = animationSelect.value;
+  saveState();
+  applySettings();
+});
+
+speedSelect.addEventListener("change", () => {
+  settings.speed = parseFloat(speedSelect.value);
+  saveState();
+  applySettings();
+});
+
+shuffleOnStart.addEventListener("change", () => {
+  settings.shuffleOnStart = shuffleOnStart.checked;
+  saveState();
+});
+
+resetSettingsBtn.addEventListener("click", () => {
+  settings = { ...DEFAULT_SETTINGS };
+  saveState();
+  applySettings();
+});
+
+// ============================================================
+//  СЛУШАТЕЛИ
+// ============================================================
+cardEl.addEventListener("click", (e) => {
+  // клик по звёздочке не должен переворачивать карточку
+  if (e.target.closest(".card__star")) return;
+  handleCardClick();
+});
+
+starFront.addEventListener("click", (e) => { e.stopPropagation(); toggleFavoriteCurrent(); });
+starBack.addEventListener("click",  (e) => { e.stopPropagation(); toggleFavoriteCurrent(); });
+
+shuffleBtn.addEventListener("click", shuffle);
+addBtn.addEventListener("click", () => openCardModal(null));
+saveBtn.addEventListener("click", saveCard);
+cancelBtn.addEventListener("click", closeCardModal);
+
+openDecksBtn.addEventListener("click", openDecksModal);
+closeDecksBtn.addEventListener("click", closeDecksModal);
+createDeckBtn.addEventListener("click", createDeck);
+
+openCardListBtn.addEventListener("click", openCardListModal);
+closeCardListBtn.addEventListener("click", closeCardListModal);
+addCardFromListBtn.addEventListener("click", () => {
+  closeCardListModal();
+  openCardModal(null);
+});
+
+toggleFavFilterBtn.addEventListener("click", toggleFavoriteFilter);
+
+openSettingsBtn.addEventListener("click", openSettingsModal);
+closeSettingsBtn.addEventListener("click", closeSettingsModal);
+
+// Закрытие по клику на фон
+[
+  [decksModal, closeDecksModal],
+  [cardModal, closeCardModal],
+  [settingsModal, closeSettingsModal],
+  [cardListModal, closeCardListModal]
+].forEach(([modal, close]) => {
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) close();
+  });
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === " ") { e.preventDefault(); handleCardClick(); }
+  if (e.key === "Escape") {
+    closeDecksModal();
+    closeCardModal();
+    closeSettingsModal();
+    closeCardListModal();
+  }
+});
+
+// ============================================================
+//  СТАРТ
+// ============================================================
+loadState();
+applySettings();
+if (settings.shuffleOnStart) shuffleCards(currentDeck());
+loadCurrentCard();
