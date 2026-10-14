@@ -1,7 +1,7 @@
 // ============================================================
 //  ХРАНИЛИЩЕ
 // ============================================================
-const STORAGE_KEY = "flashcards-state-v2";
+const STORAGE_KEY = "flashcards-state-v3";
 
 const DEFAULT_DECKS = [
   {
@@ -95,6 +95,7 @@ const DEFAULT_DECKS = [
 
 const DEFAULT_SETTINGS = {
   theme: "system",      // было "dark"
+  font: "system",
   animation: "flipY",
   speed: 0.6,
   shuffleOnStart: false
@@ -189,6 +190,7 @@ const cardListEl      = document.getElementById("cardList");
 const cardListEmpty   = document.getElementById("cardListEmpty");
 
 const toggleFavFilterBtn = document.getElementById("toggleFavFilterBtn");
+const fontSelect = document.getElementById("fontSelect");
 
 const openSettingsBtn = document.getElementById("openSettingsBtn");
 const settingsModal   = document.getElementById("settingsModal");
@@ -207,10 +209,13 @@ const newDefinition   = document.getElementById("newDefinition");
 const saveBtn         = document.getElementById("saveBtn");
 const cancelBtn       = document.getElementById("cancelBtn");
 
-const shuffleBtn      = document.getElementById("shuffleBtn");
+const sortBtn         = document.getElementById("sortBtn");
+const sortMenu        = document.getElementById("sortMenu");
 
 // Что редактируем: null — новая карточка, число — индекс в текущем разделе
 let editingCardIndex = null;
+let currentSort = "default";
+let viewOrder = []; 
 
 // ============================================================
 //  ПОМОЩНИКИ
@@ -221,15 +226,24 @@ function currentDeck() {
 
 function applySettings() {
   const theme = resolveTheme();
-  document.body.className = `theme-${theme} anim-${settings.animation}`;
+  document.body.className =
+    `theme-${theme} anim-${settings.animation} font-${settings.font}`;
+
   document.documentElement.style.setProperty("--anim-speed", settings.speed + "s");
   cardEl.style.setProperty("--anim-speed", settings.speed + "s");
 
   themeSelect.value = settings.theme;
+  fontSelect.value = settings.font;
   animationSelect.value = settings.animation;
   speedSelect.value = String(settings.speed);
   shuffleOnStart.checked = settings.shuffleOnStart;
 }
+
+fontSelect.addEventListener("change", () => {
+  settings.font = fontSelect.value;
+  saveState();
+  applySettings();
+});
 
 // Реагируем на смену системной темы «на лету»
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
@@ -245,10 +259,23 @@ function rebuildViewIndices() {
   const deck = currentDeck();
   if (!deck) { viewIndices = []; return; }
 
-  viewIndices = [];
-  for (let i = 0; i < deck.cards.length; i++) {
-    if (!favoriteOnly || deck.cards[i].favorite) viewIndices.push(i);
+  // Если порядок ещё не задан (первый запуск) — строим по умолчанию
+  if (viewOrder.length !== deck.cards.length) {
+    viewOrder = deck.cards.map((_, i) => i);
   }
+
+  viewIndices = [];
+
+  if (favoriteOnly) {
+    // Фильтр избранных — идём по viewOrder, оставляем только избранные
+    for (const i of viewOrder) {
+      if (deck.cards[i] && deck.cards[i].favorite) viewIndices.push(i);
+    }
+  } else {
+    // Берём весь порядок
+    viewIndices = viewOrder.slice();
+  }
+
   if (currentCardIndex >= viewIndices.length) currentCardIndex = 0;
 }
 
@@ -402,11 +429,17 @@ function switchDeck(index) {
   isAnimating = false;
   cardEl.classList.remove("is-flipped");
 
-  if (settings.shuffleOnStart) shuffleCards(currentDeck());
+  // Сбрасываем порядок под новый раздел
+  const deck = currentDeck();
+  viewOrder = deck.cards.map((_, i) => i);
 
-  saveState();
-  closeDecksModal();
-  loadCurrentCard();
+  if (settings.shuffleOnStart) {
+    sortCards("random");
+  } else {
+    saveState();
+    closeDecksModal();
+    loadCurrentCard();
+  }
 }
 
 function createDeck() {
@@ -444,7 +477,6 @@ function renderCardList() {
   const deck = currentDeck();
   cardListEl.innerHTML = "";
 
-  // Обновляем бейдж в заголовке модалки
   cardListCount.textContent = deck ? deck.cards.length : 0;
 
   if (!deck || deck.cards.length === 0) {
@@ -453,7 +485,10 @@ function renderCardList() {
   }
   cardListEmpty.hidden = true;
 
-  deck.cards.forEach((card, index) => {
+  // Новые — наверх: идём с конца массива
+  for (let index = deck.cards.length - 1; index >= 0; index--) {
+    const card = deck.cards[index];
+
     const li = document.createElement("li");
     li.className = "card-item";
 
@@ -502,7 +537,7 @@ function renderCardList() {
     li.appendChild(actions);
 
     cardListEl.appendChild(li);
-  });
+  }
 }
 
 function deleteCard(index) {
@@ -599,14 +634,66 @@ function shuffleCards(deck) {
   }
 }
 
-function shuffle() {
-  shuffleCards(currentDeck());
+// ============================================================
+//  СОРТИРОВКА
+// ============================================================
+function sortCards(mode) {
+  const deck = currentDeck();
+  if (!deck || deck.cards.length === 0) return;
+
+  // Строим порядок по умолчанию — по индексам 0..N-1
+  viewOrder = deck.cards.map((_, i) => i);
+
+  switch (mode) {
+    case "default":
+      // Сортировка по номеру (для счетов) — но без изменения deck.cards
+      viewOrder.sort((ia, ib) => {
+        const a = deck.cards[ia];
+        const b = deck.cards[ib];
+        const na = parseInt(a.word, 10);
+        const nb = parseInt(b.word, 10);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        return 0;
+      });
+      break;
+
+    case "random":
+      // Перемешиваем порядок (индексы)
+      for (let i = viewOrder.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [viewOrder[i], viewOrder[j]] = [viewOrder[j], viewOrder[i]];
+      }
+      break;
+
+    case "reverse":
+      viewOrder.reverse();
+      break;
+
+    case "fav-first":
+      viewOrder.sort((ia, ib) =>
+        Number(deck.cards[ib].favorite) - Number(deck.cards[ia].favorite)
+      );
+      break;
+  }
+
+  currentSort = mode;
   currentCardIndex = 0;
   isFlipped = false;
   cardEl.classList.remove("is-flipped");
   saveState();
   loadCurrentCard();
+  updateSortMenu();
 }
+
+function updateSortMenu() {
+  sortMenu.querySelectorAll(".sort-menu__item").forEach((item) => {
+    item.classList.toggle("is-active", item.dataset.sort === currentSort);
+  });
+}
+
+function openSortMenu()  { sortMenu.hidden = false; }
+function closeSortMenu() { sortMenu.hidden = true; }
+function toggleSortMenu() { sortMenu.hidden ? openSortMenu() : closeSortMenu(); }
 
 // ============================================================
 //  ФИЛЬТР ИЗБРАННЫХ
@@ -667,7 +754,22 @@ cardEl.addEventListener("click", (e) => {
 starFront.addEventListener("click", (e) => { e.stopPropagation(); toggleFavoriteCurrent(); });
 starBack.addEventListener("click",  (e) => { e.stopPropagation(); toggleFavoriteCurrent(); });
 
-shuffleBtn.addEventListener("click", shuffle);
+sortBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  toggleSortMenu();
+});
+
+sortMenu.querySelectorAll(".sort-menu__item").forEach((item) => {
+  item.addEventListener("click", () => {
+    sortCards(item.dataset.sort);
+    closeSortMenu();
+  });
+});
+
+// Клик вне меню — закрываем
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".sort-wrap")) closeSortMenu();
+});
 addBtn.addEventListener("click", () => openCardModal(null));
 saveBtn.addEventListener("click", saveCard);
 cancelBtn.addEventListener("click", closeCardModal);
@@ -715,5 +817,6 @@ document.addEventListener("keydown", (e) => {
 // ============================================================
 loadState();
 applySettings();
-if (settings.shuffleOnStart) shuffleCards(currentDeck());
+if (settings.shuffleOnStart) sortCards("random");
 loadCurrentCard();
+updateSortMenu();

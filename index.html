@@ -46,7 +46,15 @@
     </div>
 
 <div class="btn-row">
-  <button class="btn" id="shuffleBtn">🔀 Перемешать</button>
+  <div class="sort-wrap">
+    <button class="btn" id="sortBtn">🔀 Сортировать ▾</button>
+    <div class="sort-menu" id="sortMenu" hidden>
+      <button class="sort-menu__item" data-sort="default">📋 По порядку</button>
+      <button class="sort-menu__item" data-sort="random">🎲 Рандом</button>
+      <button class="sort-menu__item" data-sort="reverse">🔄 С конца</button>
+      <button class="sort-menu__item" data-sort="fav-first">⭐ Избранные вперёд</button>
+    </div>
+  </div>
   <button class="btn" id="addBtn">🃏 Добавить карточку</button>
 </div>
   </div>
@@ -96,6 +104,17 @@
     <option value="system">Системная</option>
     <option value="dark">Тёмная</option>
     <option value="light">Светлая</option>
+  </select>
+</label>
+
+<label>
+  Шрифт карточки
+  <select id="fontSelect">
+    <option value="system">Системный</option>
+    <option value="serif">Serif</option>
+    <option value="mono">Monospace</option>
+    <option value="rounded">Rounded</option>
+    <option value="condensed">Condensed</option>
   </select>
 </label>
 

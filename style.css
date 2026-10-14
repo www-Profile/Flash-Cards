@@ -110,7 +110,7 @@ body.theme-light .btn--primary {
 }
 
 /* На очень узких экранах — перенос */
-@media (max-width: 420px) {
+@media (max-width: 480px) {
   .btn-row { flex-wrap: wrap; }
   .btn-row .btn { flex: 1 1 45%; }
 }
@@ -523,4 +523,92 @@ body.anim-zoom .card.is-flipped .card__face--back  { transform: scale(1);   opac
   border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+/* ===== Шрифты карточки ===== */
+
+/* Serif — с засечками */
+body.font-serif .card__face--front h2,
+body.font-serif .card__face--back p {
+  font-family: Georgia, "Times New Roman", "PT Serif", serif;
+}
+
+/* Monospace — моноширинный */
+body.font-mono .card__face--front h2,
+body.font-mono .card__face--back p {
+  font-family: "SF Mono", "Consolas", "Menlo", "Courier New", monospace;
+  letter-spacing: -0.5px;
+}
+
+/* Rounded — округлый */
+body.font-rounded .card__face--front h2,
+body.font-rounded .card__face--back p {
+  font-family: "Comic Sans MS", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.2px;
+}
+
+/* Condensed — узкий */
+body.font-condensed .card__face--front h2,
+body.font-condensed .card__face--back p {
+  font-family: "Arial Narrow", "Roboto Condensed", "Helvetica Neue", sans-serif;
+  font-stretch: condensed;
+  letter-spacing: -0.3px;
+}
+
+/* System — по умолчанию (ничего не задаём, наследуется) */
+
+/* ===== Кнопка сортировки с меню ===== */
+.sort-wrap {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+}
+
+.sort-wrap .btn {
+  width: 100%;
+}
+
+.sort-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.sort-menu[hidden] {
+  display: none;
+}
+
+.sort-menu__item {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sort-menu__item.is-active {
+  color: var(--accent);
+}
+
+.sort-wrap {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
 }
